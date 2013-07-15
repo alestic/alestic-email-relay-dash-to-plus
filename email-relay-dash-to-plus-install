@@ -1,0 +1,27 @@
+#!/bin/bash -ex
+
+domain=${1-example.com}
+host=email-relay-dash-to-plus.$domain
+
+hostname $host
+echo "127.0.1.2 $host.$domain $host" >> /etc/hosts
+echo $host   > /etc/hostname
+echo $domain > /etc/mailname
+restart rsyslog
+
+apt-get update
+apt-get dist-upgrade -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y postfix postfix-pcre
+
+# Rewrite USERNAME-ANYTHING@DOMAIN to USERNAME+ANYTHING@DOMAIN
+echo "/^([^-]+)-(.*)@$domain\$/ \$1+\$2@$domain" \
+  > /etc/postfix/valiases-pcre
+
+# Reject addresses without '-' to prevent infinite loop with Google.
+echo '!'"/^([^-]+)-(.*)@$domain\$/ REJECT" > /etc/postfix/recipients-pcre
+
+postconf -e "myhostname = $domain"
+postconf -e "relay_domains = $domain"
+postconf -e "smtpd_recipient_restrictions = check_recipient_access pcre:/etc/postfix/recipients-pcre reject_unauth_destination"
+postconf -e "virtual_alias_maps = pcre:/etc/postfix/valiases-pcre"
+/etc/init.d/postfix reload
