@@ -1,11 +1,11 @@
 #!/bin/bash -ex
 
-domain=${1-example.com}
-host=email-relay-dash-to-plus.$domain
+host=${1-email-relay-dash-to-plus}
+domain=${2-example.com}
 
-hostname $host
+hostname $host.$domain
 echo "127.0.1.2 $host.$domain $host" >> /etc/hosts
-echo $host   > /etc/hostname
+echo $host.$domain   > /etc/hostname
 echo $domain > /etc/mailname
 restart rsyslog
 
