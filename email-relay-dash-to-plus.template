@@ -1,0 +1,244 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Alestic email-relay-dash-to-plus https://github.com/alestic/alestic-email-relay-dash-to-plus",
+
+  "Parameters" : {
+    "InstanceType" : {
+      "Description" : "Server EC2 instance type",
+      "Type" : "String",
+      "AllowedValues" : ["t1.micro","m1.small","m1.medium","c1.medium","m1.large","m2.xlarge","m1.xlarge","m3.xlarge","c1.xlarge","m2.2xlarge","m3.2xlarge","m2.4xlarge"],
+      "Default" : "t1.micro"
+    },
+    "ELBPort" : {
+      "Description" : "The external TCP port where the Load Balancer will listen",
+      "Type" : "Number",
+      "Default" : "25"
+    },
+    "OperatorEmail": {
+      "Description": "Email address to notify if there are any scaling operations",
+      "Type" : "String",
+      "Default": "your-address@example.com"
+    },
+    "SshKeyName" : {
+      "Description" : "The EC2 Key Pair to allow SSH access to the instances",
+      "Type" : "String",
+      "Default": "your-ssh-keypair"
+    },
+    "DnsDomain" : {
+      "Type" : "String",
+      "Description" : "The DNS domain name of an existing Amazon Route 53 hosted zone",
+      "Default" : "example.com"
+    },
+    "DnsHostName" : {
+      "Type" : "String",
+      "Description" : "The short DNS host name for the service endpoint (no domain)",
+      "Default" : "email-relay-dash-to-plus"
+    },
+    "MinInstances" : {
+      "Description" : "Minimum number of instances to keep running",
+      "Type" : "Number",
+      "Default" : "1"
+    },
+    "MaxInstances" : {
+      "Description" : "Maximum number of instances during scaling",
+      "Type" : "Number",
+      "Default" : "2"
+    }
+  },
+
+  "Mappings" : {
+    "AMIRegionMap" : {
+      "us-east-1"      : { "AMIID" : "ami-23d9a94a" },
+      "us-west-1"      : { "AMIID" : "ami-c4072e81" },
+      "us-west-2"      : { "AMIID" : "ami-fb68f8cb" },
+      "eu-west-1"      : { "AMIID" : "ami-89b1a3fd" },
+      "ap-northeast-1" : { "AMIID" : "ami-51129850" },
+      "ap-southeast-1" : { "AMIID" : "ami-a02f66f2" },
+      "ap-southeast-2" : { "AMIID" : "ami-974ddead" },
+      "sa-east-1"      : { "AMIID" : "ami-5c7edb41" }
+    }
+  },
+
+  "Resources" : {
+    "NotificationTopic": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "Subscription": [ {
+            "Endpoint": { "Ref": "OperatorEmail" },
+            "Protocol": "email" } ]
+      }
+    },
+
+    "ServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : { "Fn::GetAZs" : ""},
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
+        "MinSize" : {"Ref" : "MinInstances" },
+        "MaxSize" : {"Ref" : "MaxInstances" },
+        "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" } ],
+        "NotificationConfiguration" : {
+          "TopicARN" : { "Ref" : "NotificationTopic" },
+          "NotificationTypes" : [ "autoscaling:EC2_INSTANCE_LAUNCH","autoscaling:EC2_INSTANCE_LAUNCH_ERROR","autoscaling:EC2_INSTANCE_TERMINATE", "autoscaling:EC2_INSTANCE_TERMINATE_ERROR"]
+        }
+      }
+    },
+
+    "LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "KeyName" : { "Ref" : "SshKeyName" },
+        "ImageId" : { "Fn::FindInMap" : [ "AMIRegionMap", { "Ref" : "AWS::Region" }, "AMIID" ] },
+        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ],
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "InstanceMonitoring": "true",
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#!/bin/bash -ex\n",
+          "exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1\n",
+          "install=$(mktemp /tmp/install.XXXXXX)\n",
+          "curl --retry 10 -o $install https://raw.github.com/alestic/alestic-email-relay-dash-to-plus/master/email-relay-dash-to-plus-install\n",
+          "chmod 700 $install", "\n",
+          "$install ",
+            "'", { "Ref" : "DnsDomain" }, "' ",
+            "'", { "Ref" : "DnsHostName" }, "' ",
+            "'", { "Ref" : "WaitForInstanceWaitHandle" }, "'\n",
+          ""
+        ]]}}
+      }
+    },
+
+    "ServerScaleUpPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "ServerGroup" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "1"
+      }
+    },
+
+    "ServerScaleDownPolicy" : {
+      "Type" : "AWS::AutoScaling::ScalingPolicy",
+      "Properties" : {
+        "AdjustmentType" : "ChangeInCapacity",
+        "AutoScalingGroupName" : { "Ref" : "ServerGroup" },
+        "Cooldown" : "60",
+        "ScalingAdjustment" : "-1"
+      }
+    },
+
+    "CPUAlarmHigh": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "Scale-up if CPU > 90% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "90",
+        "AlarmActions": [ { "Ref": "ServerScaleUpPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "ServerGroup" }
+          }
+        ],
+        "ComparisonOperator": "GreaterThanThreshold"
+      }
+    },
+
+    "CPUAlarmLow": {
+     "Type": "AWS::CloudWatch::Alarm",
+     "Properties": {
+        "AlarmDescription": "Scale-down if CPU < 40% for 10 minutes",
+        "MetricName": "CPUUtilization",
+        "Namespace": "AWS/EC2",
+        "Statistic": "Average",
+        "Period": "300",
+        "EvaluationPeriods": "2",
+        "Threshold": "40",
+        "AlarmActions": [ { "Ref": "ServerScaleDownPolicy" } ],
+        "Dimensions": [
+          {
+            "Name": "AutoScalingGroupName",
+            "Value": { "Ref": "ServerGroup" }
+          }
+        ],
+        "ComparisonOperator": "LessThanThreshold"
+      }
+    },
+
+    "ElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "AvailabilityZones" : { "Fn::GetAZs" : "" },
+        "Listeners" : [ {
+          "LoadBalancerPort" : { "Ref" : "ELBPort" },
+          "InstancePort" : "25",
+          "Protocol" : "TCP"
+        } ],
+        "HealthCheck" : {
+          "Target" : "TCP:25",
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "5",
+          "Interval" : "10",
+          "Timeout" : "5"
+        }
+      }
+    },
+
+    "WaitForInstanceWaitHandle" : {
+      "Type" : "AWS::CloudFormation::WaitConditionHandle",
+      "Properties" : {
+      }
+    },
+    "WaitForInstance" : {
+      "Type" : "AWS::CloudFormation::WaitCondition",
+      "DependsOn" : "ServerGroup",
+      "Properties" : {
+        "Handle" : {"Ref" : "WaitForInstanceWaitHandle"},
+        "Timeout" : "1800"
+      }
+    },
+
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "SSH access from anywhere; TCP from the load balancer",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        },
+        {
+          "IpProtocol" : "tcp",
+          "FromPort" : "25",
+          "ToPort" : "25",
+          "SourceSecurityGroupOwnerId" : {"Fn::GetAtt" : ["ElasticLoadBalancer", "SourceSecurityGroup.OwnerAlias"]},
+          "SourceSecurityGroupName" : {"Fn::GetAtt" : ["ElasticLoadBalancer", "SourceSecurityGroup.GroupName"]}
+        } ]
+      }
+    },
+
+    "DnsRecord" : {
+      "Type" : "AWS::Route53::RecordSet",
+      "Properties" : {
+        "HostedZoneName" : { "Fn::Join" : [ "", [{ "Ref" : "DnsDomain" }, "." ]]},
+        "Comment" : { "Fn::Join" : [ "", [ "CNAME to ELB for ", { "Ref" : "AWS::StackName" }]]},
+        "Name" : { "Fn::Join" : [ "", [{ "Ref" : "DnsHostName" }, ".", { "Ref" : "DnsDomain" }, "."]]},
+        "Type" : "CNAME",
+        "TTL" : "300",
+        "ResourceRecords" : [{ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "EmailRelay" : {
+      "Value" : { "Fn::Join" : [ "", [{ "Ref" : "DnsRecord" }, ":" { "Ref" : "ELBPort" }]
+    }
+  }
+}
