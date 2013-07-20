@@ -4,8 +4,17 @@
 #
 # https://github.com/alestic/alestic-email-relay-dash-to-plus
 #
-domain=${1-example.com}
-host=${2-email-relay-dash-to-plus}
+domain="${1-example.com}"
+host="${2-email-relay-dash-to-plus}"
+waithandle="$3"
+
+if [ -n "$waithandle" ]; then
+    # Let CloudFormation know if this instance fails
+    trap '
+        instance_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+        curl -X PUT -H 'Content-Type:' --data-binary '{"Status":"FAILURE","Reason":"Configuration Failed","UniqueId":"'$instance_id'","Data":"Error during instance initialization. See /var/log/user-data.log"}' "$waithandle"
+    ' ERR
+fi
 
 hostname $host.$domain
 echo "127.0.1.2 $host.$domain $host" >> /etc/hosts
@@ -23,9 +32,15 @@ postconf -e "smtpd_recipient_restrictions = check_recipient_access pcre:/etc/pos
 
 # Rewrite USERNAME-ANYTHING@DOMAIN to USERNAME+ANYTHING@DOMAIN
 echo "/^([^-]+)-(.*)@$domain\$/ \$1+\$2@$domain" \
-  > /etc/postfix/valiases-pcre
+    > /etc/postfix/valiases-pcre
 postconf -e "virtual_alias_maps = pcre:/etc/postfix/valiases-pcre"
 
 postconf -e "myhostname = $domain"
 postconf -e "relay_domains = $domain"
 /etc/init.d/postfix reload
+
+# Let CloudFormation know this instance is ready.
+if [ -n "$waithandle" ]; then
+    instance_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+    curl -X PUT -H 'Content-Type:' --data-binary '{"Status":"SUCCESS","Reason":"Configuration Complete","UniqueId":"'$instance_id'","Data":"Instance has completed configuration."}' "$waithandle"
+fi
