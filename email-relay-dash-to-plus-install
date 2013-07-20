@@ -12,7 +12,7 @@ if [ -n "$waithandle" ]; then
     # Let CloudFormation know if this instance fails
     trap '
         instance_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
-        curl -X PUT -H '"'"'Content-Type:'"'"" --data-binary '"'"'{"Status":"FAILURE","Reason":"Configuration Failed","UniqueId":"'$instance_id'","Data":"Error during instance initialization. See /var/log/user-data.log"}'"'"' "$waithandle"
+        curl -X PUT -H '"'"'Content-Type:'"'"' --data-binary '"'"'{"Status":"FAILURE","Reason":"Configuration Failed","UniqueId":"'$instance_id'","Data":"Error during instance initialization. See /var/log/user-data.log"}'"'"' "$waithandle"
     ' ERR
 fi
 
