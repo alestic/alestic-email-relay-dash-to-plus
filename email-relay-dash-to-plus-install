@@ -18,8 +18,8 @@ fi
 
 hostname $host.$domain
 echo "127.0.1.2 $host.$domain $host" >> /etc/hosts
-echo $host.$domain   > /etc/hostname
-echo $domain > /etc/mailname
+echo $host.$domain > /etc/hostname
+echo $host.$domain > /etc/mailname
 restart rsyslog
 
 apt-get update
@@ -35,8 +35,9 @@ echo "/^([^-]+)-(.*)@$domain\$/ \$1+\$2@$domain" \
     > /etc/postfix/valiases-pcre
 postconf -e "virtual_alias_maps = pcre:/etc/postfix/valiases-pcre"
 
-postconf -e "myhostname = $domain"
+postconf -e "myhostname = $host.$domain"
 postconf -e "relay_domains = $domain"
+postconf -e "mydestination = $host.domain, localhost.$domain, localhost"
 /etc/init.d/postfix reload
 
 # Let CloudFormation know this instance is ready.
