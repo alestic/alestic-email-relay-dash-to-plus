@@ -238,7 +238,7 @@
 
   "Outputs" : {
     "EmailRelay" : {
-      "Value" : { "Fn::Join" : [ "", [{ "Ref" : "DnsRecord" }, ":" { "Ref" : "ELBPort" }]
+      "Value" : { "Fn::Join" : [ "", [{ "Ref" : "DnsRecord" }, ":", { "Ref" : "ELBPort" }]]}
     }
   }
 }
