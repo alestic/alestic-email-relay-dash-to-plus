@@ -7,6 +7,7 @@
 domain="${1-example.com}"
 host="${2-email-relay-dash-to-plus}"
 waithandle="$3"
+email="$4"
 
 if [ -n "$waithandle" ]; then
     # Let CloudFormation know if this instance fails
@@ -28,6 +29,11 @@ apt-get update
 apt-get dist-upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y postfix postfix-pcre
 
+if [ -n "$email" ]; then
+    echo "root: $email" >> /etc/aliases
+    newaliases
+fi
+
 # Reject addresses without '-' to prevent infinite loop with Google.
 echo '!'"/^([^-]+)-(.*)@$domain\$/ REJECT" > /etc/postfix/recipients-pcre
 postconf -e "smtpd_recipient_restrictions = check_recipient_access pcre:/etc/postfix/recipients-pcre reject_unauth_destination"
@@ -39,7 +45,7 @@ postconf -e "virtual_alias_maps = pcre:/etc/postfix/valiases-pcre"
 
 postconf -e "myhostname = $host.$domain"
 postconf -e "relay_domains = $domain"
-postconf -e "mydestination = $host.domain, localhost.$domain, localhost"
+postconf -e "mydestination = $host.$domain, localhost.$domain, localhost"
 /etc/init.d/postfix reload
 
 # Let CloudFormation know this instance is ready.
