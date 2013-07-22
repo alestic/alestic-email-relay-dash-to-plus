@@ -103,8 +103,8 @@
           "$install ",
             "'", { "Ref" : "DnsDomain" }, "' ",
             "'", { "Ref" : "DnsHostName" }, "' ",
-            "'", { "Ref" : "WaitForInstanceWaitHandle" }, "'",
-            "'", { "Ref" : "OperatorEmail" }, "'",
+            "'", { "Ref" : "WaitForInstanceWaitHandle" }, "' ",
+            "'", { "Ref" : "OperatorEmail" }, "' ",
             "\n",
           ""
         ]]}}
