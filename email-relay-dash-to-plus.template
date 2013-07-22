@@ -10,11 +10,6 @@
       "AllowedValues" : ["t1.micro","m1.small","m1.medium","c1.medium","m1.large","m2.xlarge","m1.xlarge","m3.xlarge","c1.xlarge","m2.2xlarge","m3.2xlarge","m2.4xlarge"],
       "Default" : "t1.micro"
     },
-    "ELBPort" : {
-      "Description" : "The external TCP port where the Load Balancer will listen",
-      "Type" : "Number",
-      "Default" : "25"
-    },
     "OperatorEmail": {
       "Description": "Email address to notify if there are any scaling operations",
       "Type" : "String",
@@ -44,7 +39,13 @@
       "Description" : "Maximum number of instances during scaling",
       "Type" : "Number",
       "Default" : "2"
+    },
+    "InstallScriptURL" : {
+      "Description" : "URL of script to install/configure new instances",
+      "Type" : "String",
+      "Default" : "https://raw.github.com/alestic/alestic-email-relay-dash-to-plus/master/email-relay-dash-to-plus-install"
     }
+
   },
 
   "Mappings" : {
@@ -97,7 +98,7 @@
           "#!/bin/bash -ex\n",
           "exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1\n",
           "install=$(mktemp /tmp/install.XXXXXX)\n",
-          "curl --retry 10 -o $install https://raw.github.com/alestic/alestic-email-relay-dash-to-plus/master/email-relay-dash-to-plus-install\n",
+          "curl --retry 10 -o $install ", { "Ref" : "InstallScriptURL" }, "\n",
           "chmod 700 $install", "\n",
           "$install ",
             "'", { "Ref" : "DnsDomain" }, "' ",
@@ -177,15 +178,15 @@
       "Properties" : {
         "AvailabilityZones" : { "Fn::GetAZs" : "" },
         "Listeners" : [ {
-          "LoadBalancerPort" : { "Ref" : "ELBPort" },
+          "LoadBalancerPort" : "25",
           "InstancePort" : "25",
           "Protocol" : "TCP"
         } ],
         "HealthCheck" : {
-          "Target" : "TCP:25",
+          "Target" : "TCP:22",
           "HealthyThreshold" : "2",
           "UnhealthyThreshold" : "5",
-          "Interval" : "10",
+          "Interval" : "20",
           "Timeout" : "5"
         }
       }
@@ -239,8 +240,11 @@
   },
 
   "Outputs" : {
-    "EmailRelay" : {
-      "Value" : { "Fn::Join" : [ "", [{ "Ref" : "DnsRecord" }, ":", { "Ref" : "ELBPort" }]]}
+    "EmailRoutingDestination" : {
+      "Value" : { "Ref" : "DnsRecord" }
+    },
+    "ELBDnsName" : {
+      "Value" : { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}
     }
   }
 }
