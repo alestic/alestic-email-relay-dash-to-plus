@@ -98,7 +98,7 @@
           "#!/bin/bash -ex\n",
           "exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1\n",
           "install=$(mktemp /tmp/install.XXXXXX)\n",
-          "curl --retry 10 -o $install ", { "Ref" : "InstallScriptURL" }, "\n",
+          "curl --location --retry 10 -o $install ", { "Ref" : "InstallScriptURL" }, "\n",
           "chmod 700 $install", "\n",
           "$install ",
             "'", { "Ref" : "DnsDomain" }, "' ",
