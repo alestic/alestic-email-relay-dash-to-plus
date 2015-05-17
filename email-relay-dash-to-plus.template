@@ -43,7 +43,7 @@
     "InstallScriptURL" : {
       "Description" : "URL of script to install/configure new instances",
       "Type" : "String",
-      "Default" : "https://raw.github.com/alestic/alestic-email-relay-dash-to-plus/master/email-relay-dash-to-plus-install"
+      "Default" : "https://raw.githubusercontent.com/alestic/alestic-email-relay-dash-to-plus/master/email-relay-dash-to-plus-install"
     }
 
   },
