@@ -23,7 +23,7 @@ hostname $host.$domain
 echo "127.0.1.2 $host.$domain $host" >> /etc/hosts
 echo $host.$domain > /etc/hostname
 echo $host.$domain > /etc/mailname
-service syslog restart
+service rsyslog restart
 
 apt-get update
 apt-get dist-upgrade -y
