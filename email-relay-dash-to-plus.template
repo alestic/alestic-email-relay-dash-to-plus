@@ -38,7 +38,7 @@
     "MaxInstances" : {
       "Description" : "Maximum number of instances during scaling",
       "Type" : "Number",
-      "Default" : "2"
+      "Default" : "1"
     },
     "InstallScriptURL" : {
       "Description" : "URL of script to install/configure new instances",
