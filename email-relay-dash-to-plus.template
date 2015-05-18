@@ -7,7 +7,7 @@
     "InstanceType" : {
       "Description" : "Server EC2 instance type",
       "Type" : "String",
-      "AllowedValues" : ["t2.micro", "t2.small", "t2.medium", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge", "t1.micro"],
+      "AllowedValues" : ["t2.micro", "t2.small", "t2.medium", "m3.medium", "m3.large", "m3.xlarge", "m3.2xlarge", "c4.large", "c4.xlarge", "c4.2xlarge", "c4.4xlarge", "c4.8xlarge", "c3.large", "c3.xlarge", "c3.2xlarge", "c3.4xlarge", "c3.8xlarge"],
       "Default" : "t2.micro"
     },
     "OperatorEmail": {
@@ -50,14 +50,15 @@
 
   "Mappings" : {
     "AMIRegionMap" : {
-      "us-east-1"      : { "AMIID" : "ami-18389d70" },
-      "us-west-1"      : { "AMIID" : "ami-7dede238" },
-      "us-west-2"      : { "AMIID" : "ami-179add27" },
-      "eu-west-1"      : { "AMIID" : "ami-aec41cd9" },
-      "ap-northeast-1" : { "AMIID" : "ami-3fd8fe3e" },
-      "ap-southeast-1" : { "AMIID" : "ami-9af8a2c8" },
-      "ap-southeast-2" : { "AMIID" : "ami-9d2444a7" },
-      "sa-east-1"      : { "AMIID" : "ami-99a60d84" }
+      "us-east-1"      : { "AMIID" : "ami-20534248" },
+      "us-west-1"      : { "AMIID" : "ami-abeb05ef" },
+      "us-west-2"      : { "AMIID" : "ami-cbccfcfb" },
+      "eu-central-1"   : { "AMIID" : "ami-468eb15b" },
+      "eu-west-1"      : { "AMIID" : "ami-6db2d91a" },
+      "ap-northeast-1" : { "AMIID" : "ami-82509e82" },
+      "ap-southeast-1" : { "AMIID" : "ami-4286b910" },
+      "ap-southeast-2" : { "AMIID" : "ami-d3afd0e9" },
+      "sa-east-1"      : { "AMIID" : "ami-7577f068" }
     }
   },
 
