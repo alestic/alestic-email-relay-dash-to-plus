@@ -31,6 +31,9 @@ echo "console-setup   console-setup/charmap47 select  UTF-8" > $tmpfile
 debconf-set-selections $tmpfile
 rm $tmpfile
 
+# And another to prevent hanging on console input
+apt-mark hold grub-legacy-ec2
+
 apt-get update
 apt-get dist-upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y postfix postfix-pcre
