@@ -25,6 +25,12 @@ echo $host.$domain > /etc/hostname
 echo $host.$domain > /etc/mailname
 service rsyslog restart
 
+# Avoid hanging on dist-upgrade terminal input in Ubuntu 18.04
+tmpfile=$(mktemp /tmp/encoding-XXXXXX.conf)
+echo "console-setup   console-setup/charmap47 select  UTF-8" > $tmpfile
+debconf-set-selections $tmpfile
+rm $tmpfile
+
 apt-get update
 apt-get dist-upgrade -y
 DEBIAN_FRONTEND=noninteractive apt-get install -y postfix postfix-pcre
