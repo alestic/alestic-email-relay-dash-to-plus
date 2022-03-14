@@ -55,6 +55,10 @@ postconf -e "virtual_alias_maps = pcre:/etc/postfix/valiases-pcre"
 postconf -e "myhostname = $host.$domain"
 postconf -e "relay_domains = $domain"
 postconf -e "mydestination = $host.$domain, localhost.$domain, localhost"
+
+# Increase message size limit from default ~10MB to 25MB (GMail limit)
+postconf -e "message_size_limit = 26214400"
+
 /etc/init.d/postfix reload
 
 # Let CloudFormation know this instance is ready.
