@@ -1,0 +1,70 @@
+#!/bin/bash -ex
+#
+# email-relay-dash-to-plus-install
+#
+# https://github.com/alestic/alestic-email-relay-dash-to-plus
+#
+domain="${1-example.com}"
+host="${2-email-relay-dash-to-plus}"
+waithandle="$3"
+email="$4"
+
+if [ -n "$waithandle" ]; then
+    # Let CloudFormation know if this instance fails
+    trap '
+        instance_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+        curl -X PUT -H '"'"'Content-Type:'"'"' --data-binary '"'"'{"Status":"FAILURE","Reason":"Configuration Failed","UniqueId":"'$instance_id'","Data":"Error during instance initialization. See /var/log/user-data.log"}'"'"' "$waithandle"
+    ' ERR
+fi
+
+echo "INSTANCE CONFIGURATION START"
+
+hostname $host.$domain
+echo "127.0.1.2 $host.$domain $host" >> /etc/hosts
+echo $host.$domain > /etc/hostname
+echo $host.$domain > /etc/mailname
+service rsyslog restart
+
+# Avoid hanging on dist-upgrade terminal input in Ubuntu 18.04
+tmpfile=$(mktemp /tmp/encoding-XXXXXX.conf)
+echo "console-setup   console-setup/charmap47 select  UTF-8" > $tmpfile
+debconf-set-selections $tmpfile
+rm $tmpfile
+
+# And another to prevent hanging on console input
+apt-mark hold grub-legacy-ec2
+
+apt-get update
+apt-get dist-upgrade -y
+DEBIAN_FRONTEND=noninteractive apt-get install -y postfix postfix-pcre
+
+if [ -n "$email" ]; then
+    echo "root: $email" >> /etc/aliases
+    newaliases
+fi
+
+# Reject addresses without '-' to prevent infinite loop with Google.
+echo '!'"/^([^-]+)-(.*)@$domain\$/ REJECT" > /etc/postfix/recipients-pcre
+postconf -e "smtpd_recipient_restrictions = check_recipient_access pcre:/etc/postfix/recipients-pcre reject_unauth_destination"
+
+# Rewrite USERNAME-ANYTHING@DOMAIN to USERNAME+ANYTHING@DOMAIN
+echo "/^([^-]+)-(.*)@$domain\$/ \$1+\$2@$domain" \
+    > /etc/postfix/valiases-pcre
+postconf -e "virtual_alias_maps = pcre:/etc/postfix/valiases-pcre"
+
+postconf -e "myhostname = $host.$domain"
+postconf -e "relay_domains = $domain"
+postconf -e "mydestination = $host.$domain, localhost.$domain, localhost"
+
+# Increase message size limit from default ~10MB to 25MB (GMail limit)
+postconf -e "message_size_limit = 26214400"
+
+/etc/init.d/postfix reload
+
+# Let CloudFormation know this instance is ready.
+if [ -n "$waithandle" ]; then
+    instance_id=$(curl -s http://instance-data/latest/meta-data/instance-id)
+    curl -X PUT -H 'Content-Type:' --data-binary '{"Status":"SUCCESS","Reason":"Configuration Complete","UniqueId":"'$instance_id'","Data":"Instance has completed configuration."}' "$waithandle"
+fi
+
+echo "INSTANCE CONFIGURATION COMPLETE"
