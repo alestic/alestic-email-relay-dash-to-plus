@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 #
-# email-relay-dash-to-plus-install
+# email-relay-dash-to-plus-install (Ubuntu 16.04 LTS xenial, 18.04 LTS bionic)
 #
 # https://github.com/alestic/alestic-email-relay-dash-to-plus
 #
