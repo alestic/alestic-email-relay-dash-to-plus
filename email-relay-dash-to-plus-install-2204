@@ -1,6 +1,6 @@
 #!/bin/bash -ex
 #
-# email-relay-dash-to-plus-install
+# email-relay-dash-to-plus-install-2204 (Ubuntu 22.04 LTS jammy)
 #
 # https://github.com/alestic/alestic-email-relay-dash-to-plus
 #
@@ -26,13 +26,13 @@ echo $host.$domain > /etc/mailname
 service rsyslog restart
 
 # Avoid hanging on dist-upgrade terminal input in Ubuntu 18.04
-tmpfile=$(mktemp /tmp/encoding-XXXXXX.conf)
-echo "console-setup   console-setup/charmap47 select  UTF-8" > $tmpfile
-debconf-set-selections $tmpfile
-rm $tmpfile
+#tmpfile=$(mktemp /tmp/encoding-XXXXXX.conf)
+#echo "console-setup   console-setup/charmap47 select  UTF-8" > $tmpfile
+#debconf-set-selections $tmpfile
+#rm $tmpfile
 
 # And another to prevent hanging on console input
-apt-mark hold grub-legacy-ec2
+#apt-mark hold grub-legacy-ec2
 
 apt-get update
 apt-get dist-upgrade -y
