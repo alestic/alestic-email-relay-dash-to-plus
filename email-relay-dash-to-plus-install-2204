@@ -19,6 +19,8 @@ fi
 
 echo "INSTANCE CONFIGURATION START"
 
+echo "$0"
+
 hostname $host.$domain
 echo "127.0.1.2 $host.$domain $host" >> /etc/hosts
 echo $host.$domain > /etc/hostname
